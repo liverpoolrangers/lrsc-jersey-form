@@ -159,12 +159,15 @@ button:disabled{opacity:0.6;cursor:not-allowed}
       <input id="jerseyName" placeholder="Type the name for the jersey" />
       <p class="subtitle" id="namePreviewText">Please enter a proper name only (first or last name). Nicknames are not permitted. The club will review all entries and may ask you to update the name if it does not meet this requirement.</p>
 
-      <label for="paymentStatus">Jersey Payment Status</label>
-      <select id="paymentStatus" required>
-        <option value="">Select payment status</option>
-        <option value="Paid">I have already paid</option>
-        <option value="Not Paid">I have not paid yet</option>
-      </select>
+      <label>Jersey Payment Status</label>
+      <div style="display:flex;gap:20px;margin-top:6px;">
+        <label style="font-weight:normal;display:flex;align-items:center;gap:6px;">
+          <input type="radio" name="paymentStatus" value="Paid" required> Paid
+        </label>
+        <label style="font-weight:normal;display:flex;align-items:center;gap:6px;">
+          <input type="radio" name="paymentStatus" value="Not Paid"> Not paid yet
+        </label>
+      </div>
 
       <button type="submit" id="submitButton">Submit Order</button>
       <div id="status"></div>
@@ -196,7 +199,7 @@ button:disabled{opacity:0.6;cursor:not-allowed}
   const ageSelect=document.getElementById("ageGroup");
   const sizeSelect=document.getElementById("size");
   const jerseyNameInput=document.getElementById("jerseyName");
-  const paymentStatusSelect=document.getElementById("paymentStatus");
+  const paymentStatusInputs=document.querySelectorAll('input[name="paymentStatus"]');
   const preview=document.getElementById("namePreviewText");
   const availability=document.getElementById("availability");
   const availabilityHint=document.getElementById("availabilityHint");
@@ -325,7 +328,8 @@ button:disabled{opacity:0.6;cursor:not-allowed}
     const jerseyNumber=Number(jerseyNumberInput.value);
     const size=sizeSelect.value;
     const jerseyNameRaw=jerseyNameInput.value.trim();
-    const paymentStatus=paymentStatusSelect.value;
+    let paymentStatus="";
+    paymentStatusInputs.forEach(r=>{ if(r.checked){ paymentStatus=r.value } });
 
     if(!first||!last||!email||!ageGroup||!jerseyNumber||!size||!jerseyNameRaw||!paymentStatus){
       setStatus("Please complete all fields.","error");
