@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LRSC Jersey Order Form</title>
+
+<style>
+:root{
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --text:#1f2937;
+  --muted:#6b7280;
+  --border:#d1d5db;
+  --accent:#166534;
+  --accent2:#15803d;
+  --danger:#b91c1c;
+  --ok:#166534;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.container{
+  max-width:1000px;
+  margin:auto;
+  padding:24px;
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.logo{
+  height:90px;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:20px;
+}
+
+h1,h2,h3{margin-top:0}
+
+label{display:block;font-weight:bold;margin-top:14px}
+
+input,select,button{
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  font-size:16px;
+}
+
+button{
+  background:var(--accent);
+  color:white;
+  border:none;
+  margin-top:18px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{background:var(--accent2)}
+button:disabled{opacity:0.6;cursor:not-allowed}
+
+.pill-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(54px,1fr));
+  gap:8px;
+  margin-top:12px;
+}
+
+.pill{
+  padding:10px 8px;
+  border-radius:999px;
+  background:#f3f4f6;
+  border:1px solid #e5e7eb;
+  cursor:pointer;
+  text-align:center;
+  color:var(--text);
+}
+
+.pill.selected{background:var(--accent);color:white;border-color:var(--accent)}
+.subtitle{color:var(--muted)}
+.status{margin-top:16px;padding:12px;border-radius:10px;font-size:14px}
+.status.error{background:#fef2f2;color:var(--danger);border:1px solid #fecaca}
+.status.ok{background:#ecfdf5;color:var(--ok);border:1px solid #a7f3d0}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="card header">
+    <div>
+      <h1>LRSC Jersey Order Form</h1>
+      <p class="subtitle">Choose an available jersey number. Orders are sent directly to the club's Google Sheet.</p>
+    </div>
+    <img src="lrsc-logo.png" class="logo" alt="Liverpool Rangers Soccer Club Logo" />
+  </div>
+
+  <div class="card">
+    <h2>Order Form</h2>
+
+    <form id="orderForm">
+      <label for="firstName">First Name</label>
+      <input id="firstName" required />
+
+      <label for="lastName">Last Name</label>
+      <input id="lastName" required />
+
+      <label for="email">Email</label>
+      <input id="email" type="email" required />
+
+      <label for="ageGroup">Age Group</label>
+      <select id="ageGroup" required>
+        <option value="">Select age group</option>
+      </select>
+
+      <label>Jersey Number</label>
+      <input type="hidden" id="jerseyNumber" />
+      <p class="subtitle" id="selectedNumberText">Select an age group then choose a number.</p>
+
+      <label for="size">Jersey Size</label>
+      <select id="size" required>
+        <option value="">Select size</option>
+        <option>Youth 6</option>
+        <option>Youth 8</option>
+        <option>Youth 10</option>
+        <option>Youth 12</option>
+        <option>Youth 14</option>
+        <option>Small</option>
+        <option>Medium</option>
+        <option>Large</option>
+        <option>X Large</option>
+        <option>2X Large</option>
+        <option>3X Large</option>
+        <option>Ladies 6</option>
+        <option>Ladies 8</option>
+        <option>Ladies 10</option>
+        <option>Ladies 12</option>
+        <option>Ladies 14</option>
+      </select>
+
+      <label for="jerseyName">Name on Back of Jersey</label>
+      <input id="jerseyName" placeholder="Type the name for the jersey" />
+      <p class="subtitle" id="namePreviewText">Please enter either the player's FIRST NAME or LAST NAME only. Nicknames are not allowed. Orders may be changed if the name entered does not follow this rule.</p>
+
+      <button type="submit" id="submitButton">Submit Order</button>
+      <div id="status"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Available Numbers</h2>
+    <p class="subtitle" id="availabilityHint">Select an age group to see available numbers.</p>
+    <div id="availability"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdS2E1NikH_9Hq64bitYKvoKpNEO0X2-qTQVhvG-jimxUImQfb1QC9HuHMvl3uC5mjWw/exec";
+
+  const ageGroups=[
+    "U5-6 Mixed","U7 Mixed","U8-10 Girls","U8 Mixed","U9 Mixed","U10 Mixed",
+    "U11-14 Girls","U11 Mixed","U12 Mixed","U13 Boys","U14 Boys","U15 Boys","AAL","AAM"
+  ];
+
+  const defaultNumbers=Array.from({length:99},(_,i)=>i+1);
+
+  const firstNameInput=document.getElementById("firstName");
+  const lastNameInput=document.getElementById("lastName");
+  const emailInput=document.getElementById("email");
+  const ageSelect=document.getElementById("ageGroup");
+  const sizeSelect=document.getElementById("size");
+  const jerseyNameInput=document.getElementById("jerseyName");
+  const preview=document.getElementById("namePreviewText");
+  const availability=document.getElementById("availability");
+  const availabilityHint=document.getElementById("availabilityHint");
+  const jerseyNumberInput=document.getElementById("jerseyNumber");
+  const selectedText=document.getElementById("selectedNumberText");
+  const form=document.getElementById("orderForm");
+  const statusBox=document.getElementById("status");
+  const submitButton=document.getElementById("submitButton");
+
+  let takenNumbersByGroup={};
+
+  ageGroups.forEach(group=>{
+    const option=document.createElement("option");
+    option.value=group;
+    option.textContent=group;
+    ageSelect.appendChild(option);
+  });
+
+  function setStatus(message,type){
+    statusBox.className=type?`status ${type}`:"";
+    statusBox.textContent=message||"";
+  }
+
+  function getBackName(name){
+    return (name||"").trim().toUpperCase();
+  }
+
+  function updatePreview(){
+    const name=getBackName(jerseyNameInput.value);
+    preview.textContent=name ? `Jersey back name: ${name}` : "Please enter the name exactly as it should appear on the jersey.";
+  }
+
+  jerseyNameInput.addEventListener("input",updatePreview);
+
+  firstNameInput.addEventListener("input",updatePreview);
+  lastNameInput.addEventListener("input",updatePreview);
+  
+
+  async function loadTakenNumbers(){
+    try{
+      const response=await fetch(`${GOOGLE_SCRIPT_URL}?action=takenNumbers`,{ method:"GET" });
+      const data=await response.json();
+      if(data && data.success && data.takenNumbersByGroup){
+        takenNumbersByGroup=data.takenNumbersByGroup;
+      }else{
+        takenNumbersByGroup={};
+      }
+    }catch(error){
+      takenNumbersByGroup={};
+      setStatus("Could not load taken numbers from Google Sheets.","error");
+    }
+  }
+
+  function getTakenNumbers(group){
+    const values=takenNumbersByGroup[group] || [];
+    return values
+      .map(value=>Number(value))
+      .filter(value=>Number.isInteger(value) && value >= 1 && value <= 99);
+  }
+
+  function getAvailableNumbers(group){
+    const taken=new Set(getTakenNumbers(group));
+    return defaultNumbers.filter(number=>!taken.has(number));
+  }
+
+  function clearSelectedNumber(){
+    jerseyNumberInput.value="";
+    selectedText.textContent="Select an available number.";
+  }
+
+  function renderAvailability(group){
+    availability.innerHTML="";
+
+    if(!group){
+      availabilityHint.textContent="Select an age group to see available numbers.";
+      return;
+    }
+
+    const numbers=getAvailableNumbers(group);
+    availabilityHint.textContent=`Available numbers for ${group}`;
+
+    if(numbers.length===0){
+      availability.innerHTML='<p class="subtitle">No numbers available for this age group.</p>';
+      return;
+    }
+
+    const grid=document.createElement("div");
+    grid.className="pill-list";
+
+    numbers.forEach(number=>{
+      const button=document.createElement("button");
+      button.className="pill";
+      button.type="button";
+      button.textContent=number;
+      button.addEventListener("click",()=>{
+        availability.querySelectorAll(".pill").forEach(pill=>pill.classList.remove("selected"));
+        button.classList.add("selected");
+        jerseyNumberInput.value=String(number);
+        selectedText.textContent=`Selected jersey number: ${number}`;
+        setStatus("","");
+      });
+      grid.appendChild(button);
+    });
+
+    availability.appendChild(grid);
+  }
+
+  ageSelect.addEventListener("change",async ()=>{
+    clearSelectedNumber();
+    setStatus("","");
+    if(!ageSelect.value){
+      renderAvailability("");
+      return;
+    }
+    await loadTakenNumbers();
+    renderAvailability(ageSelect.value);
+  });
+
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();
+
+    const first=firstNameInput.value.trim();
+    const last=lastNameInput.value.trim();
+    const email=emailInput.value.trim();
+    const ageGroup=ageSelect.value;
+    const jerseyNumber=Number(jerseyNumberInput.value);
+    const size=sizeSelect.value;
+    const jerseyNameRaw=jerseyNameInput.value.trim();
+
+    if(!first||!last||!email||!ageGroup||!jerseyNumber||!size||!jerseyNameRaw){
+      setStatus("Please complete all fields.","error");
+      return;
+    }
+
+    const jerseyName=getBackName(jerseyNameRaw);
+    if(!jerseyName){
+      setStatus("Please choose whether the jersey should use the first or last name.","error");
+      return;
+    }
+
+    submitButton.disabled=true;
+    setStatus("Submitting order...","");
+
+    try{
+      await loadTakenNumbers();
+      const availableNumbers=getAvailableNumbers(ageGroup);
+      if(!availableNumbers.includes(jerseyNumber)){
+        clearSelectedNumber();
+        renderAvailability(ageGroup);
+        setStatus(`Number ${jerseyNumber} is no longer available for ${ageGroup}. Please choose another number.`,"error");
+        submitButton.disabled=false;
+        return;
+      }
+
+      const payload={
+        firstName:first,
+        lastName:last,
+        email:email,
+        ageGroup:ageGroup,
+        jerseyNumber:String(jerseyNumber),
+        size:size,
+        jerseyName:jerseyName
+      };
+
+      const response=await fetch(GOOGLE_SCRIPT_URL,{
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body:JSON.stringify(payload)
+      });
+
+      const result=await response.json();
+      if(!result.success){
+        throw new Error(result.error || "Unknown error");
+      }
+
+      await loadTakenNumbers();
+      form.reset();
+      updatePreview();
+      clearSelectedNumber();
+      renderAvailability("");
+      setStatus("Order submitted successfully.","ok");
+    }catch(error){
+      setStatus(`Error submitting order: ${error.message}`,"error");
+    }finally{
+      submitButton.disabled=false;
+    }
+  });
+
+  updatePreview();
+})();
+</script>
+
+</body>
+</html>
