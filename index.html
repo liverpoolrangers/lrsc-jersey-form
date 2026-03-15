@@ -157,7 +157,14 @@ button:disabled{opacity:0.6;cursor:not-allowed}
 
       <label for="jerseyName">Name on Back of Jersey</label>
       <input id="jerseyName" placeholder="Type the name for the jersey" />
-      <p class="subtitle" id="namePreviewText">Please enter either the player's FIRST NAME or LAST NAME only. Nicknames are not allowed. Orders may be changed if the name entered does not follow this rule.</p>
+      <p class="subtitle" id="namePreviewText">Please enter a proper name only (first or last name). Nicknames are not permitted. The club will review all entries and may ask you to update the name if it does not meet this requirement.</p>
+
+      <label for="paymentStatus">Jersey Payment Status</label>
+      <select id="paymentStatus" required>
+        <option value="">Select payment status</option>
+        <option value="Paid">I have already paid</option>
+        <option value="Not Paid">I have not paid yet</option>
+      </select>
 
       <button type="submit" id="submitButton">Submit Order</button>
       <div id="status"></div>
@@ -177,8 +184,8 @@ button:disabled{opacity:0.6;cursor:not-allowed}
   const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdS2E1NikH_9Hq64bitYKvoKpNEO0X2-qTQVhvG-jimxUImQfb1QC9HuHMvl3uC5mjWw/exec";
 
   const ageGroups=[
-    "U5-6 Mixed","U7 Mixed","U8-12 Girls","U8 Mixed","U9 Mixed","U10 Mixed","U11 Mixed","U12 Mixed",
-    "U13-16 Girls","U13 Boys","U14 Boys","U15 Boys","AAL","AAM"
+    "U5-6 Mixed","U7 Mixed","U8-10 Girls","U8 Mixed","U9 Mixed","U10 Mixed",
+    "U11-14 Girls","U11 Mixed","U12 Mixed","U13 Boys","U14 Boys","U15 Boys","AAL","AAM"
   ];
 
   const defaultNumbers=Array.from({length:99},(_,i)=>i+1);
@@ -189,6 +196,7 @@ button:disabled{opacity:0.6;cursor:not-allowed}
   const ageSelect=document.getElementById("ageGroup");
   const sizeSelect=document.getElementById("size");
   const jerseyNameInput=document.getElementById("jerseyName");
+  const paymentStatusSelect=document.getElementById("paymentStatus");
   const preview=document.getElementById("namePreviewText");
   const availability=document.getElementById("availability");
   const availabilityHint=document.getElementById("availabilityHint");
@@ -317,8 +325,9 @@ button:disabled{opacity:0.6;cursor:not-allowed}
     const jerseyNumber=Number(jerseyNumberInput.value);
     const size=sizeSelect.value;
     const jerseyNameRaw=jerseyNameInput.value.trim();
+    const paymentStatus=paymentStatusSelect.value;
 
-    if(!first||!last||!email||!ageGroup||!jerseyNumber||!size||!jerseyNameRaw){
+    if(!first||!last||!email||!ageGroup||!jerseyNumber||!size||!jerseyNameRaw||!paymentStatus){
       setStatus("Please complete all fields.","error");
       return;
     }
@@ -344,6 +353,7 @@ button:disabled{opacity:0.6;cursor:not-allowed}
       }
 
       const payload={
+        paymentStatus:paymentStatus,
         firstName:first,
         lastName:last,
         email:email,
